@@ -293,4 +293,8 @@ export class DeviceService {
       })
     );
   }
+
+  public pingDevice(deviceId: string, config?: RequestConfig): Observable<any> {
+    return this.http.get<any>(`/api/device/${deviceId}/ping`, defaultHttpOptionsFromConfig(config));
+  }
 }

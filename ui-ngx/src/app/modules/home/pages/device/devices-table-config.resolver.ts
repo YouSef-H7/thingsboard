@@ -84,6 +84,7 @@ import {
   DeviceCheckConnectivityDialogData
 } from '@home/pages/device/device-check-connectivity-dialog.component';
 import { EntityId } from '@shared/models/id/entity-id';
+import { ActionNotificationShow } from '@core/notification/notification.actions';
 
 interface DevicePageQueryParams extends PageQueryParam {
   deviceProfileId?: string;
@@ -647,6 +648,9 @@ export class DevicesTableConfigResolver  {
       case 'checkConnectivity':
         this.checkConnectivity(action.event, action.entity.id);
         return true;
+      case 'ping':
+        this.pingDevice(action.event, action.entity);
+        return true;
     }
     return false;
   }
@@ -740,5 +744,64 @@ export class DevicesTableConfigResolver  {
           this.config.updateData();
         }
       });
+  }
+
+  pingDevice($event: Event, device: DeviceInfo) {
+    if ($event) {
+      $event.stopPropagation();
+    }
+    
+    console.log(`[Ping API] Calling /api/device/${device.id.id}/ping`);
+    
+    this.deviceService.pingDevice(device.id.id).subscribe(
+      (response: any) => {
+        console.log('[Ping API] Response received:', response);
+        
+        // Format timestamp to readable format
+        const lastSeenDate = response.lastSeen ? new Date(response.lastSeen) : null;
+        const lastSeenFormatted = lastSeenDate ? 
+          lastSeenDate.toLocaleTimeString(undefined, { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+          }) : 'Unknown';
+        
+        // Determine status and message based on online property
+        let message: string;
+        let status: string;
+        
+        if (response.online === true) {
+          message = `Device is ONLINE (last seen: ${lastSeenFormatted})`;
+          status = 'success';
+          console.log('[Ping API] Device is online');
+        } else {
+          message = `Device is OFFLINE (last seen: ${lastSeenFormatted})`;
+          status = 'info';
+          console.log('[Ping API] Device is offline');
+        }
+        
+        this.store.dispatch(new ActionNotificationShow({
+          message: `${device.name}: ${message}`,
+          type: status,
+          duration: 4000,
+          verticalPosition: 'bottom',
+          horizontalPosition: 'right'
+        }));
+      },
+      (error) => {
+        console.error('[Ping API] Error occurred:', error);
+        console.error('[Ping API] HTTP Status:', error?.status);
+        console.error('[Ping API] Error Message:', error?.error?.message || error?.message);
+        
+        const errorMessage = error?.error?.message || error?.message || 'Unknown error';
+        this.store.dispatch(new ActionNotificationShow({
+          message: `${device.name}: Ping failed - ${errorMessage}`,
+          type: 'error',
+          duration: 4000,
+          verticalPosition: 'bottom',
+          horizontalPosition: 'right'
+        }));
+      }
+    );
   }
 }

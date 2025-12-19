@@ -58,6 +58,14 @@
           [class.!hidden]="isEdit || deviceScope !== 'edge'">
     {{ 'edge.unassign-from-edge' | translate }}
   </button>
+  <!-- Ping button For Yousef -->
+<button mat-raised-button
+        color="accent"
+        [disabled]="(isLoading$ | async)"
+        (click)="onEntityAction($event, 'ping')"
+        [class.!hidden]="isEdit">
+  Ping
+</button>
   <button mat-raised-button color="primary"
           [disabled]="(isLoading$ | async)"
           (click)="onEntityAction($event, 'delete')"
